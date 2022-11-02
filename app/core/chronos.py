@@ -41,3 +41,19 @@ def fetch_groups() -> Optional[List[models.EDTGroup]]:
     return [
         models.EDTGroup(id=g["value"].split(".")[0], name=g.text) for g in html_options
     ]
+
+
+def get_remote_timetable_xml(group_id: str) -> Optional[str]:
+    http_client = get_client()
+
+    try:
+        chronos_response = http_client.get(
+            f"http://chronos.iut-velizy.uvsq.fr/EDT/{group_id}.xml"
+        )
+
+        chronos_response.raise_for_status()
+        chronos_response.encoding = "utf-8"
+
+        return chronos_response.text
+    except requests.exceptions.RequestException:
+        return None

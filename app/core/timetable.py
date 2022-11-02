@@ -1,11 +1,8 @@
 import xml.etree.ElementTree as ElementTree
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
-
-import requests
+from typing import Dict, List, Optional
 
 from app import models
-from app.core.network import get_client
 
 
 def convert_xml_to_timetable(timetable_xml: str) -> Optional[models.TimeTable]:
@@ -56,10 +53,20 @@ def convert_xml_to_timetable(timetable_xml: str) -> Optional[models.TimeTable]:
 
         start_date: datetime = week_date + timedelta(days=day)
         end_date: datetime = week_date + timedelta(days=day)
-        group: Optional[str] = None
-        module: Optional[str] = None
-        staff: Optional[str] = None
-        room: Optional[str] = None
+        notes: Optional[str] = None
+        color: str = course_node.get("colour", "FFFFFF")
+        course_resources: Dict[str, List[str]] = {
+            "groups": [],
+            "modules": [],
+            "staff": [],
+            "rooms": [],
+        }
+        course_resources_items = {
+            "group": "groups",
+            "module": "modules",
+            "staff": "staff",
+            "room": "rooms",
+        }
 
         start_date = start_date.replace(hour=int(times[0:2]), minute=int(times[2:4]))
         end_date = end_date.replace(hour=int(times[4:6]), minute=int(times[6:8]))
@@ -69,44 +76,32 @@ def convert_xml_to_timetable(timetable_xml: str) -> Optional[models.TimeTable]:
         if resources is None:
             return None
 
-        group_element = resources.find("group")
-        module_element = resources.find("module")
-        staff_element = resources.find("staff")
-        room_element = resources.find("room")
+        for resource_key, resource_var in course_resources_items.items():
+            resource_element = resources.find(resource_key)
 
-        if group_element is not None:
-            group_item = group_element.find("item")
+            if resource_element is not None:
+                resource_items = resource_element.findall("item")
 
-            if group_item is not None and group_item.text is not None:
-                group = group_item.text
+                for resource_item in resource_items:
+                    if resource_item.text is not None:
+                        course_resources[resource_var].append(resource_item.text)
 
-        if module_element is not None:
-            module_item = module_element.find("item")
+        notes_element = course_node.find("notes")
 
-            if module_item is not None and module_item.text is not None:
-                module = module_item.text
-
-        if staff_element is not None:
-            staff_item = staff_element.find("item")
-
-            if staff_item is not None and staff_item.text is not None:
-                staff = staff_item.text
-
-        if room_element is not None:
-            room_item = room_element.find("item")
-
-            if room_item is not None and room_item.text is not None:
-                room = room_item.text
+        if notes_element is not None and notes_element.text is not None:
+            notes = notes_element.text
 
         courses.append(
             models.Course(
                 week_date=week_date,
                 start_date=start_date,
                 end_date=end_date,
-                group=group,
-                module=module,
-                staff=staff,
-                room=room,
+                color=color,
+                groups=course_resources["groups"],
+                modules=course_resources["modules"],
+                staff=course_resources["staff"],
+                rooms=course_resources["rooms"],
+                notes=notes,
             )
         )
 
@@ -118,24 +113,9 @@ def convert_xml_to_timetable(timetable_xml: str) -> Optional[models.TimeTable]:
     return models.TimeTable(group_name=group_name, weeks=week_list, courses=courses)
 
 
-def get_remote_timetable(
-    group_id: str,
-) -> Tuple[Optional[models.TimeTable], Optional[str]]:
-    http_client = get_client()
-    try:
-        response = http_client.get(
-            f"http://chronos.iut-velizy.uvsq.fr/EDT/{group_id}.xml"
-        )
+def get_cached_timetable(group_id: str) -> Optional[models.CachedTimeTable]:
+    return None
 
-        if response.status_code != 200:
-            return None, None
 
-        response.encoding = "utf-8"
-
-        return convert_xml_to_timetable(response.text), response.text
-    except requests.exceptions.ConnectionError:
-        return None, None
-    except requests.exceptions.Timeout:
-        return None, None
-    except requests.exceptions.TooManyRedirects:
-        return None, None
+def get_timetable(group_id: str) -> Optional[models.CachedTimeTable]:
+    return None
