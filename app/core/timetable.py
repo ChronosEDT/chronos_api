@@ -1,15 +1,22 @@
+import pickle
 import xml.etree.ElementTree as ElementTree
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple, cast
 
-from app import models
+from app.core.chronos import get_remote_timetable_xml
+from app.core.redis import get_redis
+from app.logger import get_logger
+from app.models.reason import RemoteTimeTableStatus, TimeTableStatus
+from app.models.timetable import CachedTimeTable, Course, TimeTable
+
+logger = get_logger(__name__)
 
 
-def convert_xml_to_timetable(timetable_xml: str) -> Optional[models.TimeTable]:
+def convert_xml_to_timetable(timetable_xml: str) -> Optional[TimeTable]:
     root = ElementTree.fromstring(timetable_xml)
 
     weeks: Dict[int, datetime] = {}
-    courses: List[models.Course] = []
+    courses: List[Course] = []
 
     week_nodes: List[ElementTree.Element] = root.findall("span")
     course_nodes: List[ElementTree.Element] = root.findall("event")
@@ -92,7 +99,7 @@ def convert_xml_to_timetable(timetable_xml: str) -> Optional[models.TimeTable]:
             notes = notes_element.text
 
         courses.append(
-            models.Course(
+            Course(
                 week_date=week_date,
                 start_date=start_date,
                 end_date=end_date,
@@ -110,12 +117,78 @@ def convert_xml_to_timetable(timetable_xml: str) -> Optional[models.TimeTable]:
     week_list.sort()
     courses.sort(key=lambda x: x.start_date)
 
-    return models.TimeTable(group_name=group_name, weeks=week_list, courses=courses)
+    return TimeTable(group_name=group_name, weeks=week_list, courses=courses)
 
 
-def get_cached_timetable(group_id: str) -> Optional[models.CachedTimeTable]:
-    return None
+def get_cached_timetable(group_id: str) -> Optional[CachedTimeTable]:
+    redis = get_redis()
+    edt_key = f"cache_edt_{group_id}"
+
+    if redis is None:
+        return None
+
+    try:
+        edt_data = redis.get(edt_key)
+
+        if edt_data is None:
+            return None
+
+        return cast(CachedTimeTable, pickle.loads(edt_data))
+    except Exception:
+        return None
 
 
-def get_timetable(group_id: str) -> Optional[models.CachedTimeTable]:
-    return None
+def cache_timetable(group_id: str, timetable: TimeTable) -> Optional[CachedTimeTable]:
+    redis = get_redis()
+    edt_key = f"cache_edt_{group_id}"
+
+    if redis is None:
+        return None
+
+    cached_timetable = CachedTimeTable(cache_date=datetime.now(), timetable=timetable)
+
+    try:
+        edt_data = pickle.dumps(cached_timetable)
+
+        is_cached = redis.set(edt_key, edt_data, ex=15 * 60)
+
+        if is_cached is not None and is_cached is True:
+            return cached_timetable
+
+        return None
+    except Exception:
+        return None
+
+
+def get_timetable(group_id: str) -> Tuple[Optional[CachedTimeTable], TimeTableStatus]:
+    cached_timetable = get_cached_timetable(group_id)
+
+    if cached_timetable is not None:
+        return cached_timetable, TimeTableStatus.CACHE_HIT
+
+    timetable_xml, status = get_remote_timetable_xml(group_id)
+
+    if status == RemoteTimeTableStatus.NOT_FOUND:
+        return None, TimeTableStatus.NOT_FOUND
+    elif status == RemoteTimeTableStatus.ERROR:
+        return None, TimeTableStatus.ERROR
+
+    if timetable_xml is None:
+        return None, TimeTableStatus.ERROR
+
+    timetable = convert_xml_to_timetable(timetable_xml)
+
+    if timetable is None:
+        return None, TimeTableStatus.ERROR
+
+    cached_timetable = cache_timetable(group_id, timetable)
+
+    if cached_timetable is not None:
+        return cached_timetable, TimeTableStatus.CACHE_MISS
+
+    logger.warning("Timetable caching failed!")
+
+    return (
+        CachedTimeTable(cache_date=datetime.now(), timetable=timetable),
+        TimeTableStatus.CACHE_MISS,
+    )

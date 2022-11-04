@@ -1,0 +1,26 @@
+version: '3.1'
+
+services:
+  cachedb:
+    image: redis:7-alpine
+  back:
+    build: .
+    tty: true
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-delay 1
+    depends_on:
+      - cachedb
+    volumes:
+      - .:/code
+    ports:
+      - 8000:8000
+    links:
+      - cachedb
+    environment:
+      - WATCHFILES_FORCE_POLLING=true
+      - LOG_LEVEL=10
+      - REDIS_DOMAIN=cachedb
+      - REDIS_PORT=6379
+      - CHRONOS_GROUP_URL=http://chronos.iut-velizy.uvsq.fr/EDT/gindex.html
+      - CHRONOS_EDT_URL=http://chronos.iut-velizy.uvsq.fr/EDT/{0}.xml
+    env_file:
+      - ./secrets.env
