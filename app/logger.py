@@ -2,7 +2,7 @@ import logging
 
 import colorlog
 
-from app.core.config import get_settings
+from app.config import get_settings
 
 LOG_CONSOLE_FORMAT = colorlog.ColoredFormatter(
     "%(log_color)s%(asctime)s [%(levelname)s] %(name)s: %(message)s",

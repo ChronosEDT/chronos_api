@@ -1,8 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-import ujson
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class Course(BaseModel):
@@ -16,9 +15,7 @@ class Course(BaseModel):
     rooms: List[str]
     notes: Optional[str]
 
-    class Config:
-        allow_mutation = False
-        json_loads = ujson.loads
+    model_config = ConfigDict(frozen=True)
 
 
 class TimeTable(BaseModel):
@@ -26,15 +23,11 @@ class TimeTable(BaseModel):
     weeks: List[datetime]
     courses: List[Course]
 
-    class Config:
-        allow_mutation = False
-        json_loads = ujson.loads
+    model_config = ConfigDict(frozen=True)
 
 
 class CachedTimeTable(BaseModel):
     cache_date: datetime
     timetable: TimeTable
 
-    class Config:
-        allow_mutation = False
-        json_loads = ujson.loads
+    model_config = ConfigDict(frozen=True)

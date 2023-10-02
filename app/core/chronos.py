@@ -3,7 +3,7 @@ from typing import List, Optional, Tuple, cast
 import requests
 from bs4 import BeautifulSoup, Tag
 
-from app.core.config import get_settings
+from app.config import get_settings
 from app.core.network import get_client
 from app.logger import get_logger
 from app.models.group import EDTGroup
@@ -17,7 +17,7 @@ def fetch_groups() -> Optional[List[EDTGroup]]:
     settings = get_settings()
 
     try:
-        chronos_response = http_client.get(settings.CHRONOS_GROUP_URL)
+        chronos_response = http_client.get(str(settings.CHRONOS_GROUP_URL))
 
         chronos_response.raise_for_status()
         chronos_response.encoding = "utf-8"
@@ -44,7 +44,7 @@ def fetch_groups() -> Optional[List[EDTGroup]]:
         logger.exception("Unexcepted error while parsing chronos group html response!")
         return None
 
-    html_select = cast(Tag, soup.find("select", attrs={"name": "menu2"}))
+    html_select = cast(Tag | None, soup.find("select", attrs={"name": "menu2"}))
 
     if html_select is None:
         logger.warning("Chronos group: Failed to find the select tag")
@@ -68,7 +68,9 @@ def get_remote_timetable_xml(
     settings = get_settings()
 
     try:
-        chronos_response = http_client.get(settings.CHRONOS_EDT_URL.format(group_id))
+        chronos_response = http_client.get(
+            str(settings.CHRONOS_EDT_URL).format(group_id)
+        )
 
         if chronos_response.status_code == requests.status_codes.codes.not_found:
             return None, RemoteTimeTableStatus.NOT_FOUND

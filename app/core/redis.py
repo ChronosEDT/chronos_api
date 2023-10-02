@@ -3,13 +3,13 @@ from typing import Optional, cast
 import redis
 from pydantic import RedisDsn
 
-from app.core.config import get_settings
+from app.config import get_settings
 from app.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-def get_redis() -> Optional["redis.Redis[bytes]"]:
+def get_redis() -> Optional[redis.Redis[bytes]]:
     settings = get_settings()
     try:
         redis_client = redis.Redis(
