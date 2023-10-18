@@ -2,7 +2,7 @@ import logging
 from functools import lru_cache
 from typing import Any, List, Optional, Union
 
-from pydantic import AnyHttpUrl, FieldValidationInfo, HttpUrl, RedisDsn, field_validator
+from pydantic import AnyHttpUrl, HttpUrl, RedisDsn, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -47,9 +47,7 @@ class Settings(BaseSettings):
 
     @field_validator("REDIS_URI", mode="before")
     @classmethod
-    def assemble_cachedb_connection(
-        cls, v: Optional[str], info: FieldValidationInfo
-    ) -> Any:
+    def assemble_cachedb_connection(cls, v: Optional[str], info: ValidationInfo) -> Any:
         if isinstance(v, str):
             return v
         return RedisDsn.build(

@@ -1,4 +1,4 @@
-from typing import Optional, cast
+from typing import cast
 
 import redis
 from pydantic import RedisDsn
@@ -9,7 +9,7 @@ from app.logger import get_logger
 logger = get_logger(__name__)
 
 
-def get_redis() -> Optional[redis.Redis[bytes]]:
+def get_redis() -> redis.Redis[bytes] | None:
     settings = get_settings()
     try:
         redis_client = redis.Redis(

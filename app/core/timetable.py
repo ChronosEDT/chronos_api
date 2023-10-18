@@ -1,7 +1,7 @@
 import pickle
 import xml.etree.ElementTree as ElementTree
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, cast
+from typing import cast
 
 from app.core.chronos import get_remote_timetable_xml
 from app.core.redis import get_redis
@@ -12,14 +12,14 @@ from app.models.timetable import CachedTimeTable, Course, TimeTable
 logger = get_logger(__name__)
 
 
-def convert_xml_to_timetable(timetable_xml: str) -> Optional[TimeTable]:
+def convert_xml_to_timetable(timetable_xml: str) -> TimeTable | None:
     root = ElementTree.fromstring(timetable_xml)
 
-    weeks: Dict[int, datetime] = {}
-    courses: List[Course] = []
+    weeks: dict[int, datetime] = {}
+    courses: list[Course] = []
 
-    week_nodes: List[ElementTree.Element] = root.findall("span")
-    course_nodes: List[ElementTree.Element] = root.findall("event")
+    week_nodes: list[ElementTree.Element] = root.findall("span")
+    course_nodes: list[ElementTree.Element] = root.findall("event")
     options_node = root.find("option")
 
     if len(week_nodes) == 0 or options_node is None:
@@ -51,18 +51,18 @@ def convert_xml_to_timetable(timetable_xml: str) -> Optional[TimeTable]:
             return None
 
         week_index: int = rawweeks_element.text.index("Y") + 1
-        week_date: Optional[datetime] = weeks.get(week_index)
+        week_date: datetime | None = weeks.get(week_index)
         day: int = int(day_element.text)
-        times: Optional[str] = course_node.get("timesort")
+        times: str | None = course_node.get("timesort")
 
         if week_date is None or times is None:
             return None
 
         start_date: datetime = week_date + timedelta(days=day)
         end_date: datetime = week_date + timedelta(days=day)
-        notes: Optional[str] = None
+        notes: str | None = None
         color: str = course_node.get("colour", "FFFFFF")
-        course_resources: Dict[str, List[str]] = {
+        course_resources: dict[str, list[str]] = {
             "groups": [],
             "modules": [],
             "staff": [],
@@ -112,7 +112,7 @@ def convert_xml_to_timetable(timetable_xml: str) -> Optional[TimeTable]:
             )
         )
 
-    week_list: List[datetime] = list(weeks.values())
+    week_list: list[datetime] = list(weeks.values())
 
     week_list.sort()
     courses.sort(key=lambda x: x.start_date)
@@ -120,7 +120,7 @@ def convert_xml_to_timetable(timetable_xml: str) -> Optional[TimeTable]:
     return TimeTable(group_name=group_name, weeks=week_list, courses=courses)
 
 
-def get_cached_timetable(group_id: str) -> Optional[CachedTimeTable]:
+def get_cached_timetable(group_id: str) -> CachedTimeTable | None:
     redis = get_redis()
     edt_key = f"cache_edt_{group_id}"
 
@@ -138,7 +138,7 @@ def get_cached_timetable(group_id: str) -> Optional[CachedTimeTable]:
         return None
 
 
-def cache_timetable(group_id: str, timetable: TimeTable) -> Optional[CachedTimeTable]:
+def cache_timetable(group_id: str, timetable: TimeTable) -> CachedTimeTable | None:
     redis = get_redis()
     edt_key = f"cache_edt_{group_id}"
 
@@ -160,13 +160,15 @@ def cache_timetable(group_id: str, timetable: TimeTable) -> Optional[CachedTimeT
         return None
 
 
-def get_timetable(group_id: str) -> Tuple[Optional[CachedTimeTable], TimeTableStatus]:
+async def get_timetable(
+    group_id: str,
+) -> tuple[CachedTimeTable | None, TimeTableStatus]:
     cached_timetable = get_cached_timetable(group_id)
 
     if cached_timetable is not None:
         return cached_timetable, TimeTableStatus.CACHE_HIT
 
-    timetable_xml, status = get_remote_timetable_xml(group_id)
+    timetable_xml, status = await get_remote_timetable_xml(group_id)
 
     if status == RemoteTimeTableStatus.NOT_FOUND:
         return None, TimeTableStatus.NOT_FOUND

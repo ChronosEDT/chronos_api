@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any
 
 from fastapi import APIRouter
 
@@ -8,9 +8,9 @@ from app.models.group import EDTGroup
 router = APIRouter()
 
 
-@router.get("/", response_model=List[EDTGroup])
-def read_groups() -> Any:
-    groups = fetch_groups()
+@router.get("/", response_model=list[EDTGroup])
+async def read_groups() -> Any:
+    groups = await fetch_groups()
 
     if groups is None:
         return []

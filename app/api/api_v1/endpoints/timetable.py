@@ -10,8 +10,8 @@ router = APIRouter()
 
 
 @router.get("/{group_id}", response_model=CachedTimeTable)
-def read_timetable(*, group_id: str) -> Any:
-    edt_current, status = get_timetable(group_id)
+async def read_timetable(*, group_id: str) -> Any:
+    edt_current, status = await get_timetable(group_id)
 
     if status == TimeTableStatus.NOT_FOUND:
         raise HTTPException(status_code=404, detail="Group unknown")
@@ -24,8 +24,8 @@ def read_timetable(*, group_id: str) -> Any:
 
 
 @router.get("/ics/{group_id}.ics", response_class=Response)
-def get_ics_timetable(*, group_id: str) -> Any:
-    edt_current, status = get_timetable(group_id)
+async def get_ics_timetable(*, group_id: str) -> Any:
+    edt_current, status = await get_timetable(group_id)
 
     if status == TimeTableStatus.NOT_FOUND:
         raise HTTPException(status_code=404, detail="Group unknown")
