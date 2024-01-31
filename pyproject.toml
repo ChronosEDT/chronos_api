@@ -10,20 +10,19 @@ packages = [{ include = "app" }]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-fastapi = "^0.103.2"
-uvicorn = { extras = ["standard"], version = "^0.23.2" }
+fastapi = "^0.109.0"
+uvicorn = {extras = ["standard"], version = "^0.27.0.post1"}
 redis = {extras = ["hiredis"], version = "^5.0.1"}
 gunicorn = "^21.2.0"
-colorlog = "^6.7.0"
-pydantic-settings = "^2.0.3"
-httpx = "^0.25.0"
+colorlog = "^6.8.2"
+pydantic-settings = "^2.1.0"
+httpx = "^0.26.0"
 
 
 [tool.poetry.group.dev.dependencies]
-black = "^23.10.0"
-mypy = "^1.6.1"
-ruff = "^0.1.0"
-types-redis = "^4.6.0.7"
+mypy = "^1.8.0"
+ruff = "^0.1.15"
+types-redis = "^4.6.0.20240106"
 
 
 [build-system]
@@ -37,25 +36,31 @@ strict = true
 
 
 [tool.ruff]
+indent-width = 4
 target-version = "py310"
+
+[tool.ruff.lint]
 select = [
-    "E", # pycodestyle errors
-    "W", # pycodestyle warnings
-    "F", # pyflakes
-    "I", # isort
-    "C", # flake8-comprehensions
-    "B", # flake8-bugbear
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "C",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+    "UP", # pyupgrade
 ]
 ignore = [
-    "E501", # line too long, handled by black
-    "B008", # do not perform function calls in argument defaults
-    "C901", # too complex
+    "E501",  # line too long, handled by ruff
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex,
+    "W191",  # indentation contains tabs
+    "B904"   # Opinionated warning on exception chaining
 ]
 
-
-[tool.ruff.per-file-ignores]
-"__init__.py" = ["F401"]
-
+[tool.ruff.format]
+line-ending = "lf"
+quote-style = "double"
+indent-style = "space"
 
 [tool.ruff.isort]
 known-third-party = ["pydantic"]

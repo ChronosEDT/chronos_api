@@ -1,12 +1,16 @@
 {
   "[python]": {
-    "editor.formatOnSave": true,
-    "editor.codeActionsOnSave": {
-      "source.organizeImports": true
-    },
-    "editor.defaultFormatter": "ms-python.black-formatter"
+      "editor.formatOnSave": true,
+      "editor.defaultFormatter": "charliermarsh.ruff",
+      "editor.codeActionsOnSave": {
+          "source.organizeImports.ruff": "explicit"
+      }
   },
+  "ruff.fixAll": false,
+  "ruff.importStrategy": "fromEnvironment",
   "python.analysis.typeCheckingMode": "strict",
   "mypy.runUsingActiveInterpreter": true,
-  "ruff.importStrategy": "fromEnvironment"
+  "ruff.lint.args": [
+      "--extend-exclude=/**/site-packages/**/*.py",
+  ]
 }
