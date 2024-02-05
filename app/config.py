@@ -1,6 +1,5 @@
 import logging
 from functools import lru_cache
-from typing import Any, List, Optional, Union
 
 from pydantic import AnyHttpUrl, HttpUrl, RedisDsn, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -11,17 +10,14 @@ class Settings(BaseSettings):
 
     API_V1_STR: str = "/api/v1"
 
-    PROJECT_NAME: str = "EDTVelizy"
-    # BACKEND_CORS_ORIGINS is a JSON-formatted list of origins
-    # e.g: '["http://localhost", "http://localhost:4200", "http://localhost:3000", \
-    # "http://localhost:8080", "http://local.dockertoolbox.tiangolo.com"]'
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
+    PROJECT_NAME: str = "ChronosAPI"
+    BACKEND_CORS_ORIGINS: list[AnyHttpUrl] = []
 
-    SENTRY_DSN: Optional[HttpUrl] = None
+    SENTRY_DSN: HttpUrl | None = None
 
     REDIS_DOMAIN: str
     REDIS_PORT: str
-    REDIS_URI: Optional[RedisDsn] = None
+    REDIS_URI: RedisDsn | None = None
 
     EDT_CACHE_TIME: int = 15 * 60
     CHRONOS_GROUP_URL: AnyHttpUrl
@@ -31,23 +27,25 @@ class Settings(BaseSettings):
 
     @field_validator("SENTRY_DSN", mode="before")
     @classmethod
-    def sentry_dsn_can_be_blank(cls, v: Optional[str]) -> Optional[str]:
+    def sentry_dsn_can_be_blank(cls, v: str | None) -> str | None:
         if v is None or len(v) == 0:
             return None
         return v
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
-    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
+    def assemble_cors_origins(cls, v: str | list[str]) -> str | list[str]:
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):  # pyright: ignore
+        elif isinstance(v, list | str):  # pyright: ignore
             return v
         raise ValueError(v)
 
     @field_validator("REDIS_URI", mode="before")
     @classmethod
-    def assemble_cachedb_connection(cls, v: Optional[str], info: ValidationInfo) -> Any:
+    def assemble_cachedb_connection(
+        cls, v: str | None, info: ValidationInfo
+    ) -> RedisDsn | str:
         if isinstance(v, str):
             return v
         return RedisDsn.build(
